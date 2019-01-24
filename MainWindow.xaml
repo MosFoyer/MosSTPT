@@ -78,7 +78,7 @@
                 <TextBlock Text="设备IP地址：" Grid.Column="1" VerticalAlignment="Center" />
                 <TextBlock Name="TextBlockIpAddress" Text="XXX.XXX.XXX.XXX" Grid.Column="2" VerticalAlignment="Center" FontSize="20" Foreground="DodgerBlue"  />
                 <TextBlock Text="设备名：" Grid.Column="3" VerticalAlignment="Center" />
-                <TextBlock Name="TextBlockHostname" Text="TXPCSCXX" Grid.Column="4" VerticalAlignment="Center" FontSize="20" Foreground="DodgerBlue" />
+                <TextBlock Name="TextBlockHostname" Text="XXXXXXXX" Grid.Column="4" VerticalAlignment="Center" FontSize="20" Foreground="DodgerBlue" />
                 <TextBlock Name="TextBlockDeviceStatus" Text="ST Program Tool" Grid.Column="5" VerticalAlignment="Center" Foreground="DodgerBlue" HorizontalAlignment="Right" />
             </Grid>
         </Grid>
