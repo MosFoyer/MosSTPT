@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MosSTPT"
         mc:Ignorable="d"
-        Title="ST Program Tool" Height="500" Width="700" MinHeight="500" MinWidth="700" Icon="Images/STProgramTool.ico" 
+        Title="Mos ST Program Tool" Height="500" Width="700" MinHeight="500" MinWidth="700" Icon="Images/STProgramTool.ico" 
         WindowStartupLocation="CenterScreen" Loaded="WindowMain_Loaded">
     <Grid>
         <Grid Name="GridMain">

@@ -11,7 +11,7 @@ using System.Windows;
 [assembly: AssemblyDescription("Mos ST Program Tool")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("MosFoyer.com")]
-[assembly: AssemblyProduct("MosSTPT")]
+[assembly: AssemblyProduct("Mos ST Program Tool")]
 [assembly: AssemblyCopyright("Copyright © 2014-2019, MosFoyer.com, All Rights Reserved")]
 [assembly: AssemblyTrademark("Mos,MosFoyer,MosFoyer.com")]
 [assembly: AssemblyCulture("")]
