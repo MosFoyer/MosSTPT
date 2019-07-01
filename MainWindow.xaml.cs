@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -46,12 +47,23 @@ namespace MosSTPT
         private void ButtonBrowse_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog fd = new OpenFileDialog();
-            fd.Filter = "S19文件|*.s19|所有文件|*.*";
+            fd.Filter = "HEX文件|*.hex|S19文件|*.s19|所有文件|*.*";
             if (fd.ShowDialog() == true)
             {
                 TextBoxFWFileName.Text = fd.FileName;
 
-                TextBlockChecksum.Text = GetS19FileChecksum(fd.FileName);
+                string extFileName = System.IO.Path.GetExtension(fd.FileName);
+
+                if (extFileName.ToLower() == ".hex")
+                {
+                    TextBlockChecksum.Text = GetHexFileChecksum(fd.FileName);
+
+                }
+                if (extFileName.ToLower() == ".s19")
+                {
+                    TextBlockChecksum.Text = GetS19FileChecksum(fd.FileName);
+                }
+
 
             }
         }
@@ -71,26 +83,9 @@ namespace MosSTPT
 
                 UiUpdate("TESTING", "正在烧录");
 
-                using (Process p = new Process())
-                {
-                    p.StartInfo.CreateNoWindow = true;            //不创建新窗口    
-                    p.StartInfo.UseShellExecute = false;          //不启用shell启动进程  
-                    p.StartInfo.RedirectStandardInput = true;     //重定向输入流  
-                    p.StartInfo.RedirectStandardOutput = true;    //重定向输出流  
-                    p.StartInfo.RedirectStandardError = true;     //重定向错误流  
-
-                    p.StartInfo.FileName = "STVP_CmdLine.exe";
-                    p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM8S003F3 -Port=USB -ProgMode=SWIM -no_loop -log -FileProg=" + TextBoxFWFileName.Text;
-                    p.Start();
-
-                    // 异步获取命令行内容 
-                    p.BeginOutputReadLine();
-                    p.BeginErrorReadLine();
-                    // 为异步获取订阅事件  
-                    p.OutputDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
-                    p.ErrorDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
-
-                }
+                ProcessErase();
+                Thread.Sleep(200);
+                ProcessProgram();
             }
             catch (Exception ex)
             {
@@ -138,6 +133,101 @@ namespace MosSTPT
         }
 
         /// <summary>
+        /// 获取.hex文件的Checksum值(与STVP工具获得的文件Checksum值一致)
+        /// </summary>
+        /// <param name="filename">文件名</param>
+        /// <returns>十六进制表示的.hex文件的Checksum值</returns>
+        private string GetHexFileChecksum(string filename)
+        {
+            int checksum = 0;
+            string hexText;
+            using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
+            {
+                byte[] buffer = new byte[fs.Length];
+                fs.Read(buffer, 0, buffer.Length);
+                hexText = Encoding.UTF8.GetString(buffer);
+            }
+            string[] hexLines = hexText.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            for (int i = 0; i < hexLines.Count(); i++)
+            {
+                string recordType = hexLines[i].Substring(7, 2);
+
+                if (recordType == "00")
+                {
+                    string hexLine = hexLines[i].Substring(9, hexLines[i].Length - 9);
+                    if ((hexLine.Length % 2) != 0)
+                    {
+                        hexLine = hexLine + "0";
+                    }
+
+                    for (int j = 0; j < hexLine.Length - 2; j = j + 2)
+                    {
+                        int hex = Convert.ToInt32(hexLine.Substring(j, 2), 16);
+                        checksum = checksum + hex;
+                    }
+                }
+
+
+
+            }
+            //checksum = checksum % 256;
+            return "0x" + checksum.ToString("X2");
+        }
+
+        private void ProcessProgram()
+        {
+            using (Process p = new Process())
+            {
+                p.StartInfo.CreateNoWindow = true;            //不创建新窗口    
+                p.StartInfo.UseShellExecute = false;          //不启用shell启动进程  
+                p.StartInfo.RedirectStandardInput = true;     //重定向输入流  
+                p.StartInfo.RedirectStandardOutput = true;    //重定向输出流  
+                p.StartInfo.RedirectStandardError = true;     //重定向错误流  
+
+                p.StartInfo.FileName = "STVP_CmdLine.exe";
+                //p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM8S003F3 -Port=USB -ProgMode=SWIM -no_loop -log -FileProg=" + TextBoxFWFileName.Text;
+                p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM32F103x8 -Port=USB -ProgMode=SWD -no_loop -log -FileProg=" + TextBoxFWFileName.Text;
+
+                p.Start();
+
+                // 异步获取命令行内容 
+                p.BeginOutputReadLine();
+                p.BeginErrorReadLine();
+                // 为异步获取订阅事件  
+                p.OutputDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
+                p.ErrorDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
+
+            }
+        }
+
+        private void ProcessErase()
+        {
+            using (Process p = new Process())
+            {
+                p.StartInfo.CreateNoWindow = true;            //不创建新窗口    
+                p.StartInfo.UseShellExecute = false;          //不启用shell启动进程  
+                p.StartInfo.RedirectStandardInput = true;     //重定向输入流  
+                p.StartInfo.RedirectStandardOutput = true;    //重定向输出流  
+                p.StartInfo.RedirectStandardError = true;     //重定向错误流  
+
+                p.StartInfo.FileName = "STVP_CmdLine.exe";
+                p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM32F103x8 -Port=USB -ProgMode=SWD -no_loop -log -erase";
+
+                p.Start();
+
+                // 异步获取命令行内容 
+                p.BeginOutputReadLine();
+                p.BeginErrorReadLine();
+                // 为异步获取订阅事件  
+                p.OutputDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
+                p.ErrorDataReceived += new DataReceivedEventHandler(Process_OutputDataReceived);
+
+            }
+        }
+
+
+        /// <summary>
         /// Process类的标准输出接收处理函数
         /// </summary>
         /// <param name="sender"></param>
@@ -150,6 +240,18 @@ namespace MosSTPT
                 {
                     UiUpdate("FAIL", "固件烧录失败，详情查看Result.log");
                     return;
+                }
+
+                // STVP_CmdLine Return:
+                // >>> Erasing PROGRAM MEMORY
+                // <<< Erasing PROGRAM MEMORY succeeds
+                if (e.Data.IndexOf(">>> Erasing PROGRAM MEMORY") >= 0)
+                {
+                    UiUpdate("TESTING", "正在擦除程序内存");
+                }
+                if (e.Data.IndexOf("<<< Erasing PROGRAM MEMORY succeeds") >= 0)
+                {
+                    UiUpdate("TESTING", "擦除程序内存成功");
                 }
 
                 // STVP_CmdLine Return:
