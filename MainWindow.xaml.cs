@@ -90,7 +90,7 @@ namespace MosSTPT
             catch (Exception ex)
             {
                 MessageBox.Show("引发异常：" + ex.Message, "异常", MessageBoxButton.OK, MessageBoxImage.Error);
-                UiUpdate("Fail", ex.Message);
+                UiUpdate("FAIL", ex.Message);
             }
 
 
