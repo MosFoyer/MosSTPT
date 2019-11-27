@@ -84,7 +84,7 @@ namespace MosSTPT
                 UiUpdate("TESTING", "正在烧录");
 
                 ProcessErase();
-                Thread.Sleep(200);
+                Thread.Sleep(500);
                 ProcessProgram();
             }
             catch (Exception ex)
