@@ -23,6 +23,12 @@ namespace MosSTPT
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string cnfFWPath = "FWPath.cnf";                 //保存FW的文件路径
+        private string cnfDeviceName = "DeviceName.cnf";         //保存烧录IC的ComboBox中的序号
+
+        private string device = "STM32F103x8";                   //烧录IC型号，需要与STVP中的型号一致
+        private string progMode = "SWD";                         //烧录模式  
+
         public MainWindow()
         {
             InitializeComponent();
@@ -30,6 +36,7 @@ namespace MosSTPT
 
         private void WindowMain_Loaded(object sender, RoutedEventArgs e)
         {
+
             if (!Directory.Exists("Logs"))
             {
                 Directory.CreateDirectory("Logs");
@@ -41,29 +48,33 @@ namespace MosSTPT
                 File.Move("Result.log", dstFileName);
             }
 
+            //加载上次记录的FW文件路径
+            if(File.Exists(cnfFWPath))
+            {
+                TextBoxFWFileName.Text = File.ReadAllText(cnfFWPath);
+                UpdateUiChecksum(TextBoxFWFileName.Text);
+            }
+
+            //加载上次记录的烧录IC型号
+            if(File.Exists(cnfDeviceName))
+            {
+                ComboBoxDeviceName.SelectedIndex = Convert.ToInt32(File.ReadAllText(cnfDeviceName));
+            }
+
+            InitializeComboBox();
 
         }
 
         private void ButtonBrowse_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog fd = new OpenFileDialog();
-            fd.Filter = "HEX文件|*.hex|S19文件|*.s19|所有文件|*.*";
+            fd.Filter = "FW文件|*.hex;*.s19|所有文件|*.*";
             if (fd.ShowDialog() == true)
             {
                 TextBoxFWFileName.Text = fd.FileName;
-
-                string extFileName = System.IO.Path.GetExtension(fd.FileName);
-
-                if (extFileName.ToLower() == ".hex")
-                {
-                    TextBlockChecksum.Text = GetHexFileChecksum(fd.FileName);
-
-                }
-                if (extFileName.ToLower() == ".s19")
-                {
-                    TextBlockChecksum.Text = GetS19FileChecksum(fd.FileName);
-                }
-
+                UpdateUiChecksum(TextBoxFWFileName.Text);
+                //卸载配置文件里以方便程序启动时直接调用
+                File.WriteAllText(cnfFWPath, TextBoxFWFileName.Text);
 
             }
         }
@@ -81,7 +92,7 @@ namespace MosSTPT
 
                 ButtonProgram.IsEnabled = false;
 
-                UiUpdate("TESTING", "正在烧录");
+                UpdateUiStatue("TESTING", "正在烧录");
 
                 ProcessErase();
                 Thread.Sleep(500);
@@ -90,10 +101,35 @@ namespace MosSTPT
             catch (Exception ex)
             {
                 MessageBox.Show("引发异常：" + ex.Message, "异常", MessageBoxButton.OK, MessageBoxImage.Error);
-                UiUpdate("FAIL", ex.Message);
+                UpdateUiStatue("FAIL", ex.Message);
             }
 
 
+        }
+
+        private void ComboBoxDeviceName_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            File.WriteAllText(cnfDeviceName, ComboBoxDeviceName.SelectedIndex.ToString());
+
+            if(ComboBoxDeviceName.SelectedValue.ToString().Substring(0,5)=="STM32")
+            {
+                progMode = "SWD";
+            }
+
+            if (ComboBoxDeviceName.SelectedValue.ToString().Substring(0, 4) == "STM8")
+            {
+                progMode = "SWIM";
+            }
+        }
+
+
+        /// <summary>
+        /// 初始化支持的设备类型
+        /// </summary>
+        private void InitializeComboBox()
+        {
+            ComboBoxDeviceName.Items.Add("STM32F103x8");
+            ComboBoxDeviceName.Items.Add("STM8S003F3");
         }
 
         /// <summary>
@@ -186,8 +222,15 @@ namespace MosSTPT
                 p.StartInfo.RedirectStandardError = true;     //重定向错误流  
 
                 p.StartInfo.FileName = "STVP_CmdLine.exe";
+
                 //p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM8S003F3 -Port=USB -ProgMode=SWIM -no_loop -log -FileProg=" + TextBoxFWFileName.Text;
-                p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM32F103x8 -Port=USB -ProgMode=SWD -no_loop -log -FileProg=" + TextBoxFWFileName.Text;
+                //p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM32F103x8 -Port=USB -ProgMode=SWD -no_loop -log -FileProg=" + TextBoxFWFileName.Text;
+
+                p.StartInfo.Arguments = " -BoardName=ST-LINK -Tool_ID=0 -Port=USB -no_loop -log ";
+                p.StartInfo.Arguments += " -Device=" + device;
+                p.StartInfo.Arguments += " -ProgMode=" + progMode;
+                p.StartInfo.Arguments += " -FileProg=" + TextBoxFWFileName.Text;
+                p.StartInfo.Arguments += " -FileOption=ZHK-Option.hex ";
 
                 p.Start();
 
@@ -212,7 +255,15 @@ namespace MosSTPT
                 p.StartInfo.RedirectStandardError = true;     //重定向错误流  
 
                 p.StartInfo.FileName = "STVP_CmdLine.exe";
-                p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM32F103x8 -Port=USB -ProgMode=SWD -no_loop -log -erase";
+
+                //p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM8S003F3 -Port=USB -ProgMode=SWIM -no_loop -log -erase";
+                //p.StartInfo.Arguments = "-BoardName=ST-LINK -Tool_ID=0 -Device=STM32F103x8 -Port=USB -ProgMode=SWD -no_loop -log -erase";
+
+                p.StartInfo.Arguments = " -BoardName=ST-LINK -Tool_ID=0 -Port=USB -no_loop -log ";
+                p.StartInfo.Arguments += " -Device=" + device;
+                p.StartInfo.Arguments += " -ProgMode=" + progMode;
+                p.StartInfo.Arguments += " -FileProg=" + TextBoxFWFileName.Text;
+                p.StartInfo.Arguments += " -FileOption=ZHK-Option.hex ";
 
                 p.Start();
 
@@ -226,7 +277,6 @@ namespace MosSTPT
             }
         }
 
-
         /// <summary>
         /// Process类的标准输出接收处理函数
         /// </summary>
@@ -238,7 +288,7 @@ namespace MosSTPT
             {
                 if (e.Data.IndexOf("fail") >= 0 || e.Data.IndexOf("ERROR") >= 0)
                 {
-                    UiUpdate("FAIL", "固件烧录失败，详情查看Result.log");
+                    UpdateUiStatue("FAIL", "固件烧录失败，详情查看Result.log");
                     return;
                 }
 
@@ -247,11 +297,11 @@ namespace MosSTPT
                 // <<< Erasing PROGRAM MEMORY succeeds
                 if (e.Data.IndexOf(">>> Erasing PROGRAM MEMORY") >= 0)
                 {
-                    UiUpdate("TESTING", "正在擦除程序内存");
+                    UpdateUiStatue("TESTING", "正在擦除程序内存");
                 }
                 if (e.Data.IndexOf("<<< Erasing PROGRAM MEMORY succeeds") >= 0)
                 {
-                    UiUpdate("TESTING", "擦除程序内存成功");
+                    UpdateUiStatue("TESTING", "擦除程序内存成功");
                 }
 
                 // STVP_CmdLine Return:
@@ -259,11 +309,11 @@ namespace MosSTPT
                 // <<< Filling PROGRAM MEMORY image in computer succeeds
                 if (e.Data.IndexOf(">>> Filling PROGRAM MEMORY image in computer with Blank Value") >= 0)
                 {
-                    UiUpdate("TESTING", "正在清空程序区");
+                    UpdateUiStatue("TESTING", "正在清空程序区");
                 }
                 if (e.Data.IndexOf("<<< Filling PROGRAM MEMORY image in computer succeeds") >= 0)
                 {
-                    UiUpdate("TESTING", "清空程序区成功");
+                    UpdateUiStatue("TESTING", "清空程序区成功");
                 }
 
                 // STVP_CmdLine Return:
@@ -271,12 +321,12 @@ namespace MosSTPT
                 // <<< Loading file succeeds
                 if (e.Data.IndexOf(">>> Loading file") >= 0 && e.Data.IndexOf("in computer") > 0)
                 {
-                    UiUpdate("TESTING", "正在加载固件");
+                    UpdateUiStatue("TESTING", "正在加载固件");
 
                 }
                 if (e.Data.IndexOf("<<< Loading file succeeds") >= 0)
                 {
-                    UiUpdate("TESTING", "固件加载成功");
+                    UpdateUiStatue("TESTING", "固件加载成功");
 
                 }
 
@@ -286,12 +336,12 @@ namespace MosSTPT
                 // <<< Programming PROGRAM MEMORY succeeds
                 if (e.Data.IndexOf(">>> Programming PROGRAM MEMORY") >= 0)
                 {
-                    UiUpdate("TESTING", "正在写入固件");
+                    UpdateUiStatue("TESTING", "正在写入固件");
 
                 }
                 if (e.Data.IndexOf("<<< Programming PROGRAM MEMORY succeeds") >= 0)
                 {
-                    UiUpdate("TESTING", "固件写入成功");
+                    UpdateUiStatue("TESTING", "固件写入成功");
 
                 }
 
@@ -301,11 +351,11 @@ namespace MosSTPT
                 // <<< Verifying PROGRAM MEMORY succeeds
                 if (e.Data.IndexOf(">>> Verifying PROGRAM MEMORY") >= 0)
                 {
-                    UiUpdate("TESTING", "正在校验固件");
+                    UpdateUiStatue("TESTING", "正在校验固件");
                 }
                 if (e.Data.IndexOf("<<< Verifying PROGRAM MEMORY succeeds") >= 0)
                 {
-                    UiUpdate("PASS", "固件烧录成功");
+                    UpdateUiStatue("PASS", "固件烧录成功");
                 }
 
 
@@ -316,7 +366,7 @@ namespace MosSTPT
         }
 
         /// <summary>
-        /// UI信息更新的方法
+        /// 更新UI测试状态的方法
         /// </summary>
         /// <param name="uiStatus">
         /// 需要显示的状态信息，有以下机种状态：
@@ -328,7 +378,7 @@ namespace MosSTPT
         /// 7.TESTING：表示测试中
         ///</param>
         /// <param name="uiProgramInfo"></param>
-        private void UiUpdate(string uiStatus, string uiProgramInfo)
+        private void UpdateUiStatue(string uiStatus, string uiProgramInfo)
         {
             //线程安全的执行更新Ui状态栏信息
             Dispatcher.Invoke(new Action(() =>
@@ -379,6 +429,25 @@ namespace MosSTPT
 
             }));
 
+        }
+
+        /// <summary>
+        /// 更新UI显示的Checksum值的方法
+        /// </summary>
+        /// <param name="fwFileName">FW文件名</param>
+        private void UpdateUiChecksum(string fwFileName)
+        {
+            string extFileName = System.IO.Path.GetExtension(fwFileName);
+
+            if (extFileName.ToLower() == ".hex")
+            {
+                TextBlockChecksum.Text = GetHexFileChecksum(fwFileName);
+
+            }
+            if (extFileName.ToLower() == ".s19")
+            {
+                TextBlockChecksum.Text = GetS19FileChecksum(fwFileName);
+            }
         }
 
     }

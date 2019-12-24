@@ -42,16 +42,17 @@
                         <RowDefinition Height="30"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="60"/>
                         <ColumnDefinition />
                         <ColumnDefinition Width="70"/>
                         <ColumnDefinition Width="50"/>
                         <ColumnDefinition Width="70"/>
                         <ColumnDefinition Width="100"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="烧录器型号：" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" />
-                    <TextBlock Name="TextBlockProgramerModel" Grid.Column="1" Text="ST-LINK" FontSize="18" FontWeight="Bold" Foreground="DodgerBlue" VerticalAlignment="Center" />
-                    <TextBlock Text="烧录器序号 ：" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" />
+                    <TextBlock Text="设备类型：" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" />
+                    <ComboBox Name="ComboBoxDeviceName" Grid.Column="1" Height="24" FontWeight="Bold" Foreground="DodgerBlue" VerticalContentAlignment="Center" Margin="0,0,10,0" 
+                              SelectionChanged="ComboBoxDeviceName_SelectionChanged" />
+                    <TextBlock Text="烧录器序号：" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" />
                     <TextBlock Name="TextBlockProgramerID" Grid.Column="3" Text="0" FontSize="18" FontWeight="Bold" Foreground="DodgerBlue" VerticalAlignment="Center" />
                     <TextBlock Text="Checksum：" Grid.Row="0" Grid.Column="4" VerticalAlignment="Center" />
                     <TextBlock Name="TextBlockChecksum" Text="0x000000" Grid.Column="5" FontSize="18" FontWeight="Bold" Foreground="MediumOrchid" VerticalAlignment="Center" />
